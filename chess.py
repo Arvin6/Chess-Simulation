@@ -7,13 +7,6 @@ ii) Select a random position in the board which is safest for the next move (Suc
 iii) Move the initialized Black coin to a safe location if possible or print Error.
 iv) Assume White makes the next move randomly (The move made by white is shown along with the state of chessboard after the move).
 v) Make a next move such that any Black makes an attack on any white piece and handle the case when no white can be attacked by any black.(Printed with details on who attacked who).
-
-The Confusion:
-i) Checking elements on the path before attacking (Is this also included in this assignment?).
-(At this point, If a friendly or enemy piece is inbetween our coin and the target coin when attacking, it skips and assumes that the path is clear)
-For Pawn, King and Knight this is still valid since they attack the coin right next to them or do jump attacks.
-Need to tweak a little for Queen, Bishop and Rook with BFS for path finding (blocking pieces) incase if this is also needed.
-I'm assuming that isn't included with this assignment and submitting this as is.
 """
 
 import random
@@ -23,23 +16,23 @@ board = 8
 White = 'W'
 Black = 'B'
 
-class Coin:
-    x,y = 0,0
-    Color = ''
+ChessBoard = [[0 for x in range(board)] for y in range(board)]
 
+
+class Coin:
     def __init__(self, x, y, color):
         self.x = x
         self.y = y
         self.name = self.__class__.__name__
         self.Color = color
     
-    def check_conflict(self,x,y):
-        if ChessBoard[x][y] != 0:
-            return False
-        return True
+    def is_not_conflict(self,x,y):
+        if ChessBoard[x][y] == 0:
+            return True
+        return False
 
     def check_bounds(self, x,y):
-        return (x in range(board) and y in range(board) and self.check_conflict(x,y))
+        return (x in range(board) and y in range(board))
 
     def set_position(self,x1,y1):
         self.x = x1
@@ -50,13 +43,19 @@ class Coin:
 
     def possible_moves(self):
         pass
+    
+    def is_path_clear(self,src,dest):
+        pass
+
 
 class King(Coin):
     row_move = [0,1,1, 1, 0,-1,-1,-1]
     col_move = [1,1,0,-1,-1,-1, 0, 1]
     
     def is_in_range(self,x,y):
-        return (abs(self.x-x), abs(self.y-y)) in [(0,1),(1,0)]
+        if ChessBoard[x][y] == 0:
+            return False
+        return ((abs(self.x-x), abs(self.y-y)) in [(0,1),(1,0),(1,1)] and self.Color != ChessBoard[x][y][0] )
 
     def possible_moves(self):
         return [(self.x + self.row_move[i],self.y+self.col_move[i]) for i in range(len(self.row_move)) if self.check_bounds(self.x+self.row_move[i],self.y+self.col_move[i])]
@@ -70,52 +69,126 @@ class Pawn(Coin):
             self.direction = -1
     
     def is_in_range(self,x,y):
+        if ChessBoard[x][y] == 0:
+            return False
         if self.direction == 1:
-            return ((self.x < x)==True and abs(self.x - x)==1 and abs(self.y-y)==1)
+            return ((self.x < x)==True and abs(self.x - x)==1 and abs(self.y-y)==1 and self.Color != ChessBoard[x][y][0])
         else:
-            return ((self.x > x)==True and abs(self.x - x)==1 and abs(self.y-y)==1)
+            return ((self.x > x)==True and abs(self.x - x)==1 and abs(self.y-y)==1 and self.Color != ChessBoard[x][y][0])
 
     def possible_moves(self):
-        return [(self.x + self.direction, self.y) if self.x + self.direction in range(board) else (self.x,self.y)]
+        return [(self.x + self.direction, self.y) if self.check_bounds(self.x+self.direction,self.y) else (self.x,self.y)]
 
 class Bishop(Coin):
     row_move = [1,-1,-1,1]
     col_move = [1,-1, 1,-1]
 
     def is_in_range(self,x,y):
-        return abs(self.x-x) == abs(self.y-y)
+        if ChessBoard[x][y] == 0:
+            return False
+        return (abs(self.x-x) == abs(self.y-y) and self.is_path_clear(x,y) and self.Color != ChessBoard[x][y][0])
+
+    def is_path_clear(self, x, y):
+        src_x, src_y = self.get_position()
+        if (src_x,src_y) == (x,y):
+            return False
+        if src_x > x: # upper diagonal
+            if src_y > y: # left
+                for i in range(src_x, x-1, -1):
+                    for j in range(src_y-1, y-1, -1):
+                        if not self.is_not_conflict(i,j):
+                            return False
+            else: # right
+                for i in range(src_x-1, x-1, -1):
+                     for j in range(src_y+1, y+1, 1):
+                        if not self.is_not_conflict(i,j):
+                            return False
+        elif src_x < x: # Lower diagonal
+            if src_y > y: # Left
+                for i in range(src_x + 1, x+1): 
+                    for j in range(src_y-1, y-1, -1):
+                        if not self.is_not_conflict(i,j):       # abs(i-j)<=1 and
+                            return False
+            else: # Right
+                for i in range(src_x + 1, x+1): 
+                    for j in range(src_y+1, y+1):
+                        if not self.is_not_conflict(i,j):
+                            return False
+        else: 
+            return False
+        return True
 
     def possible_moves(self):
         diagonal = []
         diagonal += [(self.x-self.row_move[j]*i,self.y-self.col_move[j]*i) for i in range(board) for j in range(len(self.row_move)) if self.check_bounds(self.x-self.row_move[j]*i,self.y-self.col_move[j]*i)]
+        diagonal = [d for d in diagonal if self.is_path_clear(d[0],d[1])]
         return list(set(diagonal))
         
 class Queen(Coin):
-    row_move = [1,-1,-1, 1,0,1]
-    col_move = [1,-1, 1,-1,1,0]
-
     def is_in_range(self,x,y):
-        return (abs(self.x-x) == abs(self.y-y) or self.x == x or self.y == y)
+        if ChessBoard[x][y] == 0:
+            return False
+        if (abs(self.x-x) == abs(self.y-y) or (self.x==x or self.y==y)): 
+            return self.is_path_clear(x,y)
+        return False
+
+    def is_path_clear(self, x, y):
+        if (Rook(self.x,self.y,self.Color).is_path_clear(x,y)):
+            return True
+        if (Bishop(self.x,self.y,self.Color).is_path_clear(x,y)):
+            return True
+        return False
 
     def possible_moves(self):
-        moves = []
-        moves += [(self.x-self.row_move[j]*i,self.y-self.col_move[j]*i) for i in range(board) for j in range(len(self.row_move)) if self.check_bounds(self.x-self.row_move[j]*i, self.y-self.col_move[j]*i)]
+        moves = Bishop(self.x,self.y,self.Color).possible_moves()
+        moves += Rook(self.x,self.y,self.Color).possible_moves() 
         return list(set(moves))
 
 class Rook(Coin):
     def is_in_range(self, x, y):
-        return self.x==x or self.y==y
+        if ChessBoard[x][y] == 0:
+            return False
+        return self.is_path_clear(x,y) and self.Color != ChessBoard[x][y][0]
+
+    def is_path_clear(self,x,y):
+        src_x,src_y = self.get_position()
+        if (src_x,src_y) == (x,y):
+            return False
+        if src_x == x: # If in the same row, it'll be left or right
+            if src_y < y:
+                for i in range(src_y+1,y+1):# Move Right
+                    if not self.is_not_conflict(src_x,i):
+                        return False
+            elif src_y > y:# Move Left
+                for i in range(src_y - 1, y-1,-1):
+                    if not self.is_not_conflict(src_x, i):
+                        return False
+        elif src_y == y:
+            if src_x < x:
+                for i in range(src_x+1,x+1): # Move Down
+                    if not self.is_not_conflict(i, src_y):
+                        return False
+            elif src_x > x: # Move Up
+                for i in range(src_x-1,x-1,-1):
+                    if not self.is_not_conflict(i, src_y):
+                        return False
+        else:
+            return False
+        return True
 
     def possible_moves(self):
         moves = []
         moves += [(self.x+i,self.y) for i in range(-board+1,board) if self.x+i in range(board)]
         moves +=[(self.x,self.y+i) for i in range(-board+1,board) if self.y+i in range(board)]
+        moves  = [move for move in moves if self.is_path_clear(move[0],move[1])]
         return list(set(moves))
 
 class Knight(Coin):
     move = [-2,2]
     def is_in_range(self, x, y):
-        return (x,y) in self.possible_moves()
+        if ChessBoard[x][y] == 0:
+            return False
+        return ((x,y) in self.possible_moves() and self.Color != ChessBoard[x][y][0])
     
     def possible_moves(self):
         moves = []
@@ -149,11 +222,11 @@ class Coin_Instance:
         """
         for coin in self._Pieces:
             if coin.is_in_range(x,y):
-                print ("Coin at",x,y,"will be in attack range of the",coin.Color+"_"+coin.name,"which is at ",coin.get_position())
+                print ("Coin at",x,y,"will be in attack range of the",coin.Color+"_"+coin.name,"which is at",coin.get_position())
                 return True
         return False
     
-    def find_safe_position(self, opponent_instance):
+    def find_safe_position(self, opponent_instance, Color):
         """
         Check if any possible move for any piece is in attack range of opponent
         """
@@ -161,28 +234,43 @@ class Coin_Instance:
             moves = piece.possible_moves()
             for move in moves:
                 if check_if_unoccupied(move[0],move[1]):
+                    ChessBoard[move[0]][move[1]] = piece.Color+"_"+piece.name
+                    ChessBoard[piece.x][piece.y] = 0
                     if not opponent_instance.check_if_in_attack_range(move[0],move[1]):
-                        print (piece.Color+"_"+piece.name,"at",piece.get_position(),"Moved to",move)
-                        x1,y1 = piece.get_position()
-                        ChessBoard[x1][y1] = 0
-                        ChessBoard[move[0]][move[1]] = piece.Color+"_"+piece.name 
-                        return
+                        if piece.is_path_clear(move[0],move[1]):
+                            print (piece.Color+"_"+piece.name,"at",piece.get_position(),"Moved to",move)
+                            # x1,y1 = piece.get_position()
+                            # ChessBoard[x1][y1] = 0
+                            # ChessBoard[move[0]][move[1]] = piece.Color+"_"+piece.name
+                            piece.set_position(move[0],move[1])
+                            return
+                    ChessBoard[move[0]][move[1]] = 0
+                    ChessBoard[piece.x][piece.y] = piece.Color+"_"+piece.name
         else:
             print ("No safe positions")
 
-    def attack_random_opponent(self, opponent_pos):
-        for coin_position in opponent_pos:    
+    
+    def attack_random_opponent(self, opponent_instance):    
+        for coin_position in opponent_instance._Pieces:
             for coin in self._Pieces:
-                x = coin_position[0]
-                y = coin_position[1]
+                x = coin_position.x
+                y = coin_position.y
                 if coin.is_in_range(x,y):
-                    print ("Attacking Coin",ChessBoard[x][y],"at",x,y,"with our",coin.Color+"_"+coin.name,"which is at ",coin.get_position(),"\n")
-                    init_x, init_y = coin.get_position() 
-                    ChessBoard[x][y] = ChessBoard[init_x][init_y]
-                    ChessBoard[init_x][init_y] = 0
-                    return True
+                    if coin.is_path_clear(x,y):
+                        print ("Attacking Coin",ChessBoard[x][y],"at",x,y,"with our",coin.Color+"_"+coin.name,"which is at ",coin.get_position(),"\n")
+                        init_x, init_y = coin.get_position() 
+                        ChessBoard[x][y] = ChessBoard[init_x][init_y]
+                        ChessBoard[init_x][init_y] = 0
+                        coin.set_position(x,y)
+                        opponent_instance._Pieces.remove(coin_position)
+                        return True
         return False
-
+    
+    # def attack_random_opponent(self, opponent_instance):
+    #     for op_Piece in opponent_instance._Pieces:
+    #         if self.check_if_in_attack_range(op_Piece.x,op_Piece.y):
+    #             return True
+    #     return False
 
     def get_all_positions(self):
         return [coin.get_position() for coin in self._Pieces]
@@ -208,8 +296,6 @@ class Coin_Instance:
             n-=1
         return False
 
-
-ChessBoard = [[0 for x in range(board)] for y in range(board)]
 
 def check_bounds(x,y):
     return (x in range(board) and y in range(board))
@@ -237,7 +323,11 @@ def check_if_unoccupied(x,y):
     return not ChessBoard[x][y]
 
 def randomInitialize(color):
-    pawn   = [color+'_p']*8
+    # saving 1 pawn from Black to place in the random position after init
+    if color == Black:
+        pawn   = [color+'_p']*7
+    else:
+        pawn   = [color+'_p']*8
     king   = [color+'_k']
     queen  = [color+'_q']
     rook   = [color+'_r']*2
@@ -267,19 +357,22 @@ list_black = randomInitialize(Black)
 White_instance = Coin_Instance(list_white)
 Black_instance = Coin_Instance(list_black)
 
-num = 0 
 print ("Randomly initialized board\n")
 print(numpy.array(ChessBoard))
 
-n = 64 - 32
+n = 64
 while(n>0):
     x = random.randrange(board)
     y = random.randrange(board)
     if check_bounds(x,y) and check_if_unoccupied(x,y):
         print("\nChecking for",x,y)
+        ChessBoard[x][y] = "B_rand"
         if not White_instance.check_if_in_attack_range(x,y):
-            print("Random safest position in the Board is ",x,y)
+            print("Random safest position for Black Pawn in the Board is",x,y)
+            ChessBoard[x][y]="B_Pawn"
+            Black_instance._Pieces.append(Pawn(x,y,Black))
             break
+        ChessBoard[x][y] = 0
         n-=1
 else:
     print ("No random safe positions here")
@@ -287,7 +380,7 @@ else:
 draw_line()
 #--- This is another way to find safe positions where we use our initialized Black coins and check with White coins---#
 print ("Now finding safest position based on our random initialization i.e, Select a random Black piece from init and find its safe position")
-Black_instance.find_safe_position(White_instance)
+Black_instance.find_safe_position(White_instance, Black)
 print (numpy.array(ChessBoard))
 # --- #
 draw_line()
@@ -296,8 +389,8 @@ White_instance.make_random_move()
 print ("\nThe Chessboard now")
 print(numpy.array(ChessBoard))
 draw_line()
-white_pos = White_instance.get_all_positions()
-if not Black_instance.attack_random_opponent(white_pos):
+if not Black_instance.attack_random_opponent(White_instance):
     print ("Cannot attack any white at this state\n")
 print(numpy.array(ChessBoard))
 draw_line()
+print( len(White_instance._Pieces), len(Black_instance._Pieces))
