@@ -336,8 +336,18 @@ def get_piece_list(color):
     knight = [color+'_n']*2
     return pawn+king+queen+rook+bishop+knight
 
+
+def get_piece_names(color):
+    pawn   = [color+'_p']
+    king   = [color+'_k']
+    queen  = [color+'_q']
+    rook   = [color+'_r']
+    bishop = [color+'_b']
+    knight = [color+'_n']
+    return pawn+king+queen+rook+bishop+knight
+
 def get_random_piece(color):
-    piece_list = get_piece_list(color)
+    piece_list = get_piece_names(color)
     return GetPieceInstance(random.choice(piece_list),-1,-1,color)
 
 def randomInitialize(color):
