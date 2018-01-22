@@ -126,7 +126,8 @@ class Bishop(Coin):
     def possible_moves(self):
         diagonal = []
         diagonal += [(self.x-self.row_move[j]*i,self.y-self.col_move[j]*i) for i in range(board) for j in range(len(self.row_move)) if self.check_bounds(self.x-self.row_move[j]*i,self.y-self.col_move[j]*i)]
-        diagonal = [d for d in diagonal if self.is_path_clear(d[0],d[1])]
+        # diagonal = [d for d in diagonal if self.is_path_clear(d[0],d[1])]
+        print (diagonal)
         return list(set(diagonal))
         
 class Queen(Coin):
@@ -390,9 +391,9 @@ else:
 print_ChessBoard()
 draw_line()
 
-for move in Black_random_piece.possible_moves():
-    if Black_random_piece.is_in_range(move[0],move[1]):
-        print (Black_random_piece.get_name(),"at",Black_random_piece.get_position(),"Can attack",ChessBoard[move[0]][move[1]],"at",move)
+for position in White_instance.get_all_positions():
+    if Black_random_piece.is_in_range(position[0],position[1]):
+        print (Black_random_piece.get_name(),"at",Black_random_piece.get_position(),"Can attack",ChessBoard[position[0]][position[1]],"at",position)
         break
 else:
     print ("\nCan't attack any piece")
