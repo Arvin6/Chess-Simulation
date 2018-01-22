@@ -10,8 +10,7 @@ v) Make a next move such that any Black makes an attack on any white piece and h
 """
 
 import random
-import numpy
-
+from pandas import *
 board = 8
 White = 'W'
 Black = 'B'
@@ -206,6 +205,7 @@ class Knight(Coin):
                     moves.append((self.x-1 , self.y+self.move[i]))
                 if self.x + 1 in range(board):
                     moves.append((self.x+1 , self.y+self.move[i]))
+            moves = [move for move in moves if move!=(self.x,self.y)]
         return moves
 
 class Coin_Instance:
@@ -237,8 +237,9 @@ class Coin_Instance:
             moves = piece.possible_moves()
             for move in moves:
                 if check_if_unoccupied(move[0],move[1]):
+                    init_position = piece.get_position()
                     ChessBoard[move[0]][move[1]] = piece.Color+"_"+piece.name
-                    ChessBoard[piece.x][piece.y] = 0
+                    ChessBoard[init_position[0]][init_position[1]] = 0
                     if not opponent_instance.check_if_in_attack_range(move[0],move[1]):
                         if piece.is_path_clear(move[0],move[1]):
                             print (piece.Color+"_"+piece.name,"at",piece.get_position(),"Moved to",move)
@@ -248,7 +249,7 @@ class Coin_Instance:
                             piece.set_position(move[0],move[1])
                             return
                     ChessBoard[move[0]][move[1]] = 0
-                    ChessBoard[piece.x][piece.y] = piece.Color+"_"+piece.name
+                    ChessBoard[init_position[0]][init_position[1]] = piece.Color+"_"+piece.name
         else:
             print ("No safe positions")
 
@@ -268,12 +269,6 @@ class Coin_Instance:
                         opponent_instance._Pieces.remove(coin_position)
                         return True
         return False
-    
-    # def attack_random_opponent(self, opponent_instance):
-    #     for op_Piece in opponent_instance._Pieces:
-    #         if self.check_if_in_attack_range(op_Piece.x,op_Piece.y):
-    #             return True
-    #     return False
 
     def get_all_positions(self):
         return [coin.get_position() for coin in self._Pieces]
@@ -324,6 +319,9 @@ def draw_line():
 
 def check_if_unoccupied(x,y):
     return not ChessBoard[x][y]
+
+def print_ChessBoard():
+    print (DataFrame(ChessBoard))
 
 def randomInitialize(color):
     # saving 1 pawn from Black to place in the random position after init
@@ -387,7 +385,8 @@ White_instance = Coin_Instance(list_white)
 Black_instance = Coin_Instance(list_black)
 
 print ("Randomly initialized board\n")
-print(numpy.array(ChessBoard))
+# print(numpy.array(ChessBoard))
+print (DataFrame(ChessBoard))
 
 n = board*board
 while(n>0):
@@ -397,29 +396,27 @@ while(n>0):
         print("\nChecking for",x,y)
         ChessBoard[x][y] = "B_Pawn"
         if not White_instance.check_if_in_attack_range(x,y):
-            print("Random safest position for Black Pawn in the Board is",x,y)
-            # ChessBoard[x][y]="B_Pawn"
+            print("Random safest position for the Black Pawn in the Board is",x,y)
             Black_instance._Pieces.append(Pawn(x,y,Black))
             break
         ChessBoard[x][y] = 0
     n-=1
 else:
     print ("No random safe positions here")
-
+print_ChessBoard()
 draw_line()
 #--- This is another way to find safe positions where we use our initialized Black coins and check with White coins---#
 print ("Now finding safest position based on our random initialization i.e, Select a random Black piece from init and find its safe position")
 Black_instance.find_safe_position(White_instance, Black)
-print (numpy.array(ChessBoard))
+print_ChessBoard()
 # --- #
 draw_line()
 print ("Random move from White coin instance")
 White_instance.make_random_move()
 print ("\nThe Chessboard now")
-print(numpy.array(ChessBoard))
+print_ChessBoard()
 draw_line()
 if not Black_instance.attack_random_opponent(White_instance):
     print ("Cannot attack any white at this state\n")
-print(numpy.array(ChessBoard))
+print_ChessBoard()
 draw_line()
-print( len(White_instance._Pieces), len(Black_instance._Pieces))
