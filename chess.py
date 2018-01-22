@@ -9,7 +9,7 @@ iv) Assume White makes the next move randomly (The move made by white is shown a
 v) Make a next move such that any Black makes an attack on any white piece and handle the case when no white can be attacked by any black.(Printed with details on who attacked who).
 """
 
-import random
+import random,sys
 from pandas import *
 board = 8
 White = 'W'
@@ -24,6 +24,9 @@ class Coin:
         self.y = y
         self.name = self.__class__.__name__
         self.Color = color
+
+    def get_name(self):
+        return self.Color+"_"+self.name
     
     def is_not_conflict(self,x,y):
         if ChessBoard[x][y] == 0:
@@ -210,7 +213,7 @@ class Knight(Coin):
 
 class Coin_Instance:
     """
-    This is the instance class of each coin [Black and white]
+    This is the instance class of each player [Black and white]
     It takes care of the positions and holds each coin instance in it's list _Pieces
     """
     def __init__(self, pieces):
@@ -225,7 +228,7 @@ class Coin_Instance:
         """
         for coin in self._Pieces:
             if coin.is_in_range(x,y):
-                print ("Coin at",x,y,"will be in attack range of the",coin.Color+"_"+coin.name,"which is at",coin.get_position())
+                # print ("Coin at",x,y,"will be in attack range of the",coin.Color+"_"+coin.name,"which is at",coin.get_position())
                 return True
         return False
     
@@ -323,100 +326,73 @@ def check_if_unoccupied(x,y):
 def print_ChessBoard():
     print (DataFrame(ChessBoard))
 
-def randomInitialize(color):
-    # saving 1 pawn from Black to place in the random position after init
-    if color == Black:
-        pawn   = [color+'_p']*7
-    else:
-        pawn   = [color+'_p']*8
+def get_piece_list(color):
+    pawn   = [color+'_p']*8
     king   = [color+'_k']
     queen  = [color+'_q']
     rook   = [color+'_r']*2
     bishop = [color+'_b']*2
     knight = [color+'_n']*2
-    White_p_list = []
-    pieces_list = pawn+king+queen+rook+bishop+knight
-    # print (pieces_list)
+    return pawn+king+queen+rook+bishop+knight
+
+def get_random_piece(color):
+    piece_list = get_piece_list(color)
+    return GetPieceInstance(random.choice(piece_list),-1,-1,color)
+
+def randomInitialize(color):
+    pieces_list = get_piece_list(color)
+    piece_list = []
     while(len(pieces_list)>0):
         x = random.randrange(board)
         y = random.randrange(board)
         if check_bounds(x,y) and check_if_unoccupied(x,y):
             element = pieces_list.pop(0)
             if (element == color+'_p') :
-                if (color == White and x == board-1) or (color == Black and x == 0):        
+                if (color == White and x == board-1) or (color == Black and x == 0):
+                    # Not placing pawn in the opponent territory                    
                     pieces_list.append(element)
                     continue
             piece = GetPieceInstance(element,x,y,color)
             if piece:
-                ChessBoard[x][y] = color+'_'+piece.name
-                White_p_list.append(piece)
-    return White_p_list
-
-"""
-
-xz=5
-yz=7
-
-Pawn(xz,yz+1, Black), Pawn(xz+1,yz, Black),
-                     Pawn(xz+1,yz+1,Black),Pawn(xz-1,yz-1, Black), King(xz,yz-1,Black), Pawn(xz-1,yz,Black),
-                     Pawn(xz-1,yz+1,Black), Pawn(xz+1,yz-1,Black)
-
-
-Black_instance = Coin_Instance([Pawn(2,7, Black), Pawn(3,7,Black)])
-
-for i in Black_instance._Pieces:
-    i.set_position(i.x,i.y)
-
-coin = Queen(0,0,White)
-coin.set_position(xz,yz)
-White_instance = Coin_Instance([coin])
-for i in range(board):
-    for j in range(board):
-        if White_instance._Pieces[0].is_in_range(i,j):
-            print(i,j)
-print (numpy.array(ChessBoard))
-"""
-
+                ChessBoard[x][y] = piece.get_name()
+                piece_list.append(piece)
+    return piece_list
 
 list_white = randomInitialize(White)
-list_black = randomInitialize(Black)
+# list_black = randomInitialize(Black)
 
 White_instance = Coin_Instance(list_white)
-Black_instance = Coin_Instance(list_black)
+Black_instance = Coin_Instance([])
 
 print ("Randomly initialized board\n")
-# print(numpy.array(ChessBoard))
 print (DataFrame(ChessBoard))
+
+Black_random_piece = get_random_piece(Black)
+print ("\nThe Chosen Piece is",Black_random_piece.get_name())
 
 n = board*board
 while(n>0):
     x = random.randrange(board)
     y = random.randrange(board)
     if check_bounds(x,y) and check_if_unoccupied(x,y):
-        print("\nChecking for",x,y)
-        ChessBoard[x][y] = "B_Pawn"
+        ChessBoard[x][y] = Black_random_piece.get_name()
         if not White_instance.check_if_in_attack_range(x,y):
-            print("Random safest position for the Black Pawn in the Board is",x,y)
-            Black_instance._Pieces.append(Pawn(x,y,Black))
+            print("Random safest position for the",Black_random_piece.get_name(),"in the Board is",x,y)
+            Black_random_piece.set_position(x,y)
+            Black_instance._Pieces.append(Black_random_piece)
             break
         ChessBoard[x][y] = 0
     n-=1
 else:
     print ("No random safe positions here")
+    sys.exit(0)
+
 print_ChessBoard()
 draw_line()
-#--- This is another way to find safe positions where we use our initialized Black coins and check with White coins---#
-print ("Now finding safest position based on our random initialization i.e, Select a random Black piece from init and find its safe position")
-Black_instance.find_safe_position(White_instance, Black)
-print_ChessBoard()
-# --- #
-draw_line()
-print ("Random move from White coin instance")
-White_instance.make_random_move()
-print ("\nThe Chessboard now")
-print_ChessBoard()
-draw_line()
-if not Black_instance.attack_random_opponent(White_instance):
-    print ("Cannot attack any white at this state\n")
-print_ChessBoard()
-draw_line()
+
+for move in Black_random_piece.possible_moves():
+    if Black_random_piece.is_in_range(move[0],move[1]):
+        print (Black_random_piece.get_name(),"at",Black_random_piece.get_position(),"Can attack",ChessBoard[move[0]][move[1]],"at",move)
+        break
+else:
+    print ("\nCan't attack any piece")
