@@ -37,6 +37,7 @@ class Coin:
     def set_position(self,x1,y1):
         self.x = x1
         self.y = y1
+        ChessBoard[x1][y1] = self.Color+"_"+self.name
 
     def get_position(self):
         return (self.x,self.y)
@@ -86,7 +87,9 @@ class Bishop(Coin):
     def is_in_range(self,x,y):
         if ChessBoard[x][y] == 0:
             return False
-        return (abs(self.x-x) == abs(self.y-y) and self.is_path_clear(x,y) and self.Color != ChessBoard[x][y][0])
+        if self.Color != ChessBoard[x][y][0] and abs(self.x-x) == abs(self.y-y):
+            return self.is_path_clear(x,y)
+        return False
 
     def is_path_clear(self, x, y):
         src_x, src_y = self.get_position()
@@ -94,24 +97,24 @@ class Bishop(Coin):
             return False
         if src_x > x: # upper diagonal
             if src_y > y: # left
-                for i in range(src_x, x-1, -1):
-                    for j in range(src_y-1, y-1, -1):
+                for i in range(src_x-1, x, -1):
+                    for j in range(src_y-1, y, -1):
                         if not self.is_not_conflict(i,j):
                             return False
             else: # right
-                for i in range(src_x-1, x-1, -1):
-                     for j in range(src_y+1, y+1, 1):
+                for i in range(src_x-1, x, -1):
+                     for j in range(src_y+1, y, 1):
                         if not self.is_not_conflict(i,j):
                             return False
         elif src_x < x: # Lower diagonal
             if src_y > y: # Left
-                for i in range(src_x + 1, x+1): 
-                    for j in range(src_y-1, y-1, -1):
-                        if not self.is_not_conflict(i,j):       # abs(i-j)<=1 and
+                for i in range(src_x + 1, x): 
+                    for j in range(src_y-1, y, -1):
+                        if not self.is_not_conflict(i,j):
                             return False
             else: # Right
-                for i in range(src_x + 1, x+1): 
-                    for j in range(src_y+1, y+1):
+                for i in range(src_x + 1, x): 
+                    for j in range(src_y+1, y):
                         if not self.is_not_conflict(i,j):
                             return False
         else: 
@@ -128,15 +131,13 @@ class Queen(Coin):
     def is_in_range(self,x,y):
         if ChessBoard[x][y] == 0:
             return False
-        if (abs(self.x-x) == abs(self.y-y) or (self.x==x or self.y==y)): 
-            return self.is_path_clear(x,y)
-        return False
-
+        return self.is_path_clear(x,y)
+        
     def is_path_clear(self, x, y):
-        if (Rook(self.x,self.y,self.Color).is_path_clear(x,y)):
-            return True
-        if (Bishop(self.x,self.y,self.Color).is_path_clear(x,y)):
-            return True
+        if self.x==x or self.y==y: 
+            return Rook.is_path_clear(self,x,y)
+        if abs(self.x-x) == abs(self.y-y):
+            return Bishop.is_path_clear(self,x,y)
         return False
 
     def possible_moves(self):
@@ -148,7 +149,9 @@ class Rook(Coin):
     def is_in_range(self, x, y):
         if ChessBoard[x][y] == 0:
             return False
-        return self.is_path_clear(x,y) and self.Color != ChessBoard[x][y][0]
+        if self.x == x or self.y ==y:
+            return self.is_path_clear(x,y) and self.Color != ChessBoard[x][y][0]
+        return False
 
     def is_path_clear(self,x,y):
         src_x,src_y = self.get_position()
@@ -156,20 +159,20 @@ class Rook(Coin):
             return False
         if src_x == x: # If in the same row, it'll be left or right
             if src_y < y:
-                for i in range(src_y+1,y+1):# Move Right
+                for i in range(src_y+1,y):# Move Right
                     if not self.is_not_conflict(src_x,i):
                         return False
             elif src_y > y:# Move Left
-                for i in range(src_y - 1, y-1,-1):
+                for i in range(src_y - 1, y,-1):
                     if not self.is_not_conflict(src_x, i):
                         return False
         elif src_y == y:
             if src_x < x:
-                for i in range(src_x+1,x+1): # Move Down
+                for i in range(src_x+1,x): # Move Down
                     if not self.is_not_conflict(i, src_y):
                         return False
             elif src_x > x: # Move Up
-                for i in range(src_x-1,x-1,-1):
+                for i in range(src_x-1,x,-1):
                     if not self.is_not_conflict(i, src_y):
                         return False
         else:
@@ -351,6 +354,32 @@ def randomInitialize(color):
                 White_p_list.append(piece)
     return White_p_list
 
+"""
+
+xz=5
+yz=7
+
+Pawn(xz,yz+1, Black), Pawn(xz+1,yz, Black),
+                     Pawn(xz+1,yz+1,Black),Pawn(xz-1,yz-1, Black), King(xz,yz-1,Black), Pawn(xz-1,yz,Black),
+                     Pawn(xz-1,yz+1,Black), Pawn(xz+1,yz-1,Black)
+
+
+Black_instance = Coin_Instance([Pawn(2,7, Black), Pawn(3,7,Black)])
+
+for i in Black_instance._Pieces:
+    i.set_position(i.x,i.y)
+
+coin = Queen(0,0,White)
+coin.set_position(xz,yz)
+White_instance = Coin_Instance([coin])
+for i in range(board):
+    for j in range(board):
+        if White_instance._Pieces[0].is_in_range(i,j):
+            print(i,j)
+print (numpy.array(ChessBoard))
+"""
+
+
 list_white = randomInitialize(White)
 list_black = randomInitialize(Black)
 
@@ -360,20 +389,20 @@ Black_instance = Coin_Instance(list_black)
 print ("Randomly initialized board\n")
 print(numpy.array(ChessBoard))
 
-n = 64
+n = board*board
 while(n>0):
     x = random.randrange(board)
     y = random.randrange(board)
     if check_bounds(x,y) and check_if_unoccupied(x,y):
         print("\nChecking for",x,y)
-        ChessBoard[x][y] = "B_rand"
+        ChessBoard[x][y] = "B_Pawn"
         if not White_instance.check_if_in_attack_range(x,y):
             print("Random safest position for Black Pawn in the Board is",x,y)
-            ChessBoard[x][y]="B_Pawn"
+            # ChessBoard[x][y]="B_Pawn"
             Black_instance._Pieces.append(Pawn(x,y,Black))
             break
         ChessBoard[x][y] = 0
-        n-=1
+    n-=1
 else:
     print ("No random safe positions here")
 
