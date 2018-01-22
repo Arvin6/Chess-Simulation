@@ -368,7 +368,33 @@ Black_instance = Coin_Instance([])
 print ("Randomly initialized board\n")
 print (DataFrame(ChessBoard))
 
-Black_random_piece = get_random_piece(Black)
+
+selection = input("Enter your choice of coin if any: ")
+if selection:
+    choice = selection.lower()
+    if choice == "knight":
+        piece = Black+'_n'
+    elif choice == "king":
+        piece = Black+'_k'
+    elif choice == "queen":
+        piece = Black+'_q'
+    elif choice == "pawn":
+        piece = Black+'_p'
+    elif choice == "rook":
+        piece = Black+'_r'
+    elif choice == "bishop":
+        piece = Black+'_b'
+    else:
+        print ("Your input is invalid, choosing random coin")
+        piece = 'random'
+    
+    if piece == 'random':
+        Black_random_piece = get_random_piece(Black)
+    else:    
+        Black_random_piece = GetPieceInstance(piece,-1,-1,Black)
+else:
+    Black_random_piece = get_random_piece(Black)
+
 print ("\nThe Chosen Piece is",Black_random_piece.get_name())
 
 n = board*board
