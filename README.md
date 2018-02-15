@@ -1,5 +1,5 @@
 # Chess-Simulation
-This is a task for Agentz.ai
+A simlpe chess game simulation on python.
 # Requirements
 Python 3.6.3
 
